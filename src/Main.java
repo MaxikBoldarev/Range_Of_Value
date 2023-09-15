@@ -1,10 +1,11 @@
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
+import java.util.concurrent.*;
 
 public class Main {
 
-    public static void main(String[] args) throws InterruptedException {
+    public static void main(String[] args) throws InterruptedException, ExecutionException {
         String[] texts = new String[25];
 
         for (int i = 0; i < texts.length; i++) {
@@ -13,10 +14,11 @@ public class Main {
 
         long startTs = System.currentTimeMillis(); // start time
 
-        List<Thread> threads = new ArrayList<>();
+        List<Future> futureTaskList = new ArrayList<>();
+        final ExecutorService threadPool = Executors.newFixedThreadPool(6);
 
         for (String text : texts) {
-            Thread thread = new Thread(() -> {
+            Future<Integer> futureTask = threadPool.submit(() -> {
                 int maxSize = 0;
                 for (int i = 0; i < text.length(); i++) {
                     for (int j = 0; j < text.length(); j++) {
@@ -34,17 +36,22 @@ public class Main {
                             maxSize = j - i;
                         }
                     }
+
                 }
-                System.out.println(text.substring(0, 100) + " -> " + maxSize);
+                return maxSize;
             });
-            threads.add(thread);
-            thread.start();
 
+            futureTaskList.add(futureTask);
         }
-        for (Thread thread : threads) {
-            thread.join(); // зависаем, ждём когда поток объект которого лежит в thread завершится
-
+        int maxValue = 0;
+        for (Future<Integer> task : futureTaskList) {
+            Integer result = task.get();
+            if(result > maxValue){
+                maxValue = result;
+            }
         }
+        threadPool.shutdown();
+        System.out.println(maxValue);
         long endTs = System.currentTimeMillis(); // end time
         System.out.println("Time: " + (endTs - startTs) + "ms");
     }
